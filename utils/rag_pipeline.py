@@ -1,8 +1,6 @@
 import os
 from dotenv import load_dotenv
 from groq import Groq
-import chromadb
-from chromadb.utils import embedding_functions
 
 load_dotenv()
 
@@ -28,45 +26,32 @@ def is_crisis(text):
 def load_knowledge_base():
     with open("data/knowledge_base.txt", "r", encoding="utf-8") as f:
         content = f.read()
-    
-    # Split into chunks
-    chunks = []
-    sections = content.split("\n\n")
-    for section in sections:
-        if len(section.strip()) > 50:
-            chunks.append(section.strip())
+    chunks = [s.strip() for s in content.split("\n\n") if len(s.strip()) > 50]
     return chunks
 
-def setup_vectorstore(chunks):
-    client = chromadb.PersistentClient(path="chroma_db")
-    
-    ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name="all-MiniLM-L6-v2"
-    )
-    
-    # Collection already exists check
-    try:
-        collection = client.get_collection("mindease", embedding_function=ef)
-        print("✅ Loaded existing vector database!")
-    except:
-        collection = client.create_collection("mindease", embedding_function=ef)
-        ids = [f"chunk_{i}" for i in range(len(chunks))]
-        collection.add(documents=chunks, ids=ids)
-        print(f"✅ Created vector database with {len(chunks)} chunks!")
-    
-    return collection
+def get_relevant_context(chunks, query, n=3):
+    """Simple keyword-based retrieval — ChromaDB అక్కర్లేదు!"""
+    query_words = set(query.lower().split())
+    scored = []
+    for chunk in chunks:
+        chunk_words = set(chunk.lower().split())
+        score = len(query_words & chunk_words)
+        scored.append((score, chunk))
+    scored.sort(reverse=True)
+    return "\n\n".join([c for _, c in scored[:n]])
 
-def get_relevant_context(collection, query, n_results=3):
-    results = collection.query(query_texts=[query], n_results=n_results)
-    context = "\n\n".join(results["documents"][0])
-    return context
+def initialize():
+    chunks = load_knowledge_base()
+    groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    print(f"✅ Loaded {len(chunks)} knowledge chunks!")
+    return chunks, groq_client
 
-def get_response(collection, groq_client, user_message):
+def get_response(chunks, groq_client, user_message):
     if is_crisis(user_message):
         return CRISIS_RESPONSE, True
-    
-    context = get_relevant_context(collection, user_message)
-    
+
+    context = get_relevant_context(chunks, user_message)
+
     prompt = f"""You are MindEase, a compassionate AI mental health support assistant.
 Use the context below to provide empathetic, helpful support.
 Never diagnose or prescribe. Always encourage professional help when needed.
@@ -84,27 +69,5 @@ Compassionate response:"""
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7
     )
-    
+
     return response.choices[0].message.content, False
-
-def initialize():
-    chunks = load_knowledge_base()
-    collection = setup_vectorstore(chunks)
-    groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-    return collection, groq_client
-
-if __name__ == "__main__":
-    print("Initializing MindEase...\n")
-    collection, groq_client = initialize()
-    
-    tests = [
-        "I feel very anxious lately",
-        "I can't sleep at night",
-        "I feel really stressed about exams"
-    ]
-    
-    for msg in tests:
-        print(f"User: {msg}")
-        response, crisis = get_response(collection, groq_client, msg)
-        print(f"MindEase: {response}\n")
-        print("-" * 50)
