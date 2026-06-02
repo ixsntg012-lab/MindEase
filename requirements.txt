@@ -1,3 +1,5 @@
 streamlit
 groq
 python-dotenv
+chromadb==0.5.0
+sentence-transformers
