@@ -33,6 +33,39 @@ st.markdown("""
     margin: 8px 0;
     color: white;
 }
+
+/* Quick topic buttons ki custom style */
+.stButton button {
+    border-radius: 20px;
+    border: 1px solid #4ADE80;
+    background-color: transparent;
+    color: #4ADE80;
+    transition: all 0.3s ease;
+}
+.stButton button:hover {
+    background-color: #4ADE80;
+    color: #0E1117;
+    transform: scale(1.05);
+}
+
+/* Title ki custom gradient */
+h1 {
+    background: linear-gradient(90deg, #4ADE80, #22D3EE);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+}
+
+/* Disclaimer box ki custom border */
+.stAlert {
+    border-left: 4px solid #F59E0B;
+    border-radius: 8px;
+}
+
+/* Chat input box ki custom style */
+.stChatInput {
+    border-radius: 24px;
+}
 </style>
 """, unsafe_allow_html=True)
 
